@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aventura Gramatical - 1º y 2º ESO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background-color: #f0fdf4;
+        }
+
+        .card-flip {
+            perspective: 1000px;
+        }
+        .card-inner {
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+        .card-inner.flipped {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            backface-visibility: hidden;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+
+        .drop-zone {
+            min-height: 120px;
+            transition: all 0.3s ease;
+        }
+        .drop-zone.drag-over {
+            background-color: #dcfce7;
+            border-color: #22c55e;
+            transform: scale(1.02);
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800">
+
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white p-6 shadow-lg">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
+            <h1 class="text-3xl font-bold flex items-center gap-2">
+                <span>📚</span> Aventura Gramatical
+            </h1>
+            <nav class="mt-4 md:mt-0 flex gap-4">
+                <button onclick="showSection('flashcards')" class="px-4 py-2 hover:bg-indigo-500 rounded-lg transition">Repaso</button>
+                <button onclick="showSection('sorter')" class="px-4 py-2 hover:bg-indigo-500 rounded-lg transition">Clasificador</button>
+                <button onclick="showSection('quiz')" class="px-4 py-2 hover:bg-indigo-500 rounded-lg transition">Desafío</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-8">
+        
+        <!-- SECTION: FLASHCARDS -->
+        <section id="flashcards" class="section-content">
+            <h2 class="text-2xl font-bold text-center mb-8 text-indigo-800">Tarjetas de Repaso</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="cards-container">
+                <!-- Cards will be injected by JS -->
+            </div>
+        </section>
+
+        <!-- SECTION: SORTER GAME -->
+        <section id="sorter" class="section-content hidden">
+            <h2 class="text-2xl font-bold text-center mb-4 text-indigo-800">El Clasificador Veloz</h2>
+            <p class="text-center mb-8 text-slate-600">Arrastra las palabras a su caja correspondiente.</p>
+            
+            <div class="flex flex-wrap justify-center gap-3 mb-10" id="words-to-drag">
+                <!-- Draggable words injected by JS -->
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="drop-zones-container">
+                <div class="drop-zone border-4 border-dashed border-indigo-200 rounded-xl p-4 bg-white shadow-sm flex flex-col items-center" data-category="sustantivo">
+                    <span class="font-bold text-indigo-600 mb-2 uppercase tracking-wide">Sustantivos</span>
+                    <div class="flex flex-wrap gap-2 justify-center content-area"></div>
+                </div>
+                <div class="drop-zone border-4 border-dashed border-emerald-200 rounded-xl p-4 bg-white shadow-sm flex flex-col items-center" data-category="adjetivo">
+                    <span class="font-bold text-emerald-600 mb-2 uppercase tracking-wide">Adjetivos</span>
+                    <div class="flex flex-wrap gap-2 justify-center content-area"></div>
+                </div>
+                <div class="drop-zone border-4 border-dashed border-amber-200 rounded-xl p-4 bg-white shadow-sm flex flex-col items-center" data-category="verbo">
+                    <span class="font-bold text-amber-600 mb-2 uppercase tracking-wide">Verbos</span>
+                    <div class="flex flex-wrap gap-2 justify-center content-area"></div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-10">
+                <button onclick="resetSorter()" class="bg-indigo-600 text-white px-8 py-3 rounded-full font-bold hover:bg-indigo-700 transition shadow-lg">Reiniciar Juego</button>
+            </div>
+        </section>
+
+        <!-- SECTION: QUIZ -->
+        <section id="quiz" class="section-content hidden">
+            <div class="max-w-2xl mx-auto bg-white p-8 rounded-2xl shadow-xl border border-indigo-100">
+                <div id="quiz-container">
+                    <div class="flex justify-between items-center mb-6">
+                        <span class="text-sm font-bold text-indigo-500 uppercase tracking-widest" id="quiz-progress">Pregunta 1 de 5</span>
+                        <span class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm" id="quiz-score">Puntos: 0</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-6 text-slate-800" id="quiz-question">Cargando pregunta...</h3>
+                    <div class="grid gap-4" id="quiz-options">
+                        <!-- Options injected by JS -->
+                    </div>
+                    <div id="quiz-feedback" class="mt-6 p-4 rounded-lg hidden text-center font-bold"></div>
+                </div>
+                <div id="quiz-results" class="hidden text-center">
+                    <h3 class="text-3xl font-bold mb-4 text-indigo-800">¡Reto terminado!</h3>
+                    <p class="text-xl mb-6" id="final-score-text"></p>
+                    <button onclick="startQuiz()" class="bg-indigo-600 text-white px-8 py-3 rounded-full font-bold hover:bg-indigo-700">Intentar de nuevo</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="mt-12 p-6 text-center text-slate-500 text-sm">
+        Recurso educativo para 1º y 2º ESO • Diseñado con ❤️ para docentes
+    </footer>
+
+    <script>
+        // --- DATA ---
+        const categoriesData = [
+            { name: "Sustantivo", def: "Palabras que nombran personas, animales, cosas, ideas o sentimientos.", example: "Perro, mesa, alegría, Madrid." },
+            { name: "Adjetivo", def: "Palabras que expresan cualidades o estados del sustantivo.", example: "Rápido, inteligente, azul, cansado." },
+            { name: "Verbo", def: "Palabras que expresan acciones, procesos o estados en un tiempo determinado.", example: "Correr, saltar, pensar, vivimos." },
+            { name: "Pronombre", def: "Palabras que sustituyen al sustantivo o nombre para evitar su repetición.", example: "Yo, tú, él, nosotros, alguien, este." },
+            { name: "Determinante", def: "Palabras que acompañan al sustantivo para concretarlo.", example: "El, esta, mi, algunos, tres." },
+            { name: "Adverbio", def: "Palabras que indican circunstancias de lugar, tiempo, modo, cantidad...", example: "Aquí, ayer, bien, mucho, no." },
+            { name: "Preposición", def: "Palabras invariables que sirven para unir o relacionar palabras.", example: "A, ante, bajo, con, de, desde, en, para..." },
+            { name: "Conjunción", def: "Palabras invariables que sirven para unir palabras u oraciones.", example: "Y, e, ni, o, u, pero, aunque, porque." }
+        ];
+
+        const wordsGame = [
+            { text: "Montaña", cat: "sustantivo" },
+            { text: "Escribir", cat: "verbo" },
+            { text: "Brillante", cat: "adjetivo" },
+            { text: "Libertad", cat: "sustantivo" },
+            { text: "Escuchar", cat: "verbo" },
+            { text: "Simpático", cat: "adjetivo" },
+            { text: "Caminar", cat: "verbo" },
+            { text: "Bosque", cat: "sustantivo" },
+            { text: "Rojizo", cat: "adjetivo" }
+        ];
+
+        const quizQuestions = [
+            { q: "Identifica la categoría de 'lentamente' en: 'Él caminaba lentamente'.", options: ["Sustantivo", "Adjetivo", "Adverbio", "Verbo"], correct: 2 },
+            { q: "En la frase 'La casa es grande', ¿qué palabra es el adjetivo?", options: ["La", "casa", "es", "grande"], correct: 3 },
+            { q: "¿Cuál de estas palabras es un sustantivo abstracto?", options: ["Piedra", "Justicia", "Gato", "Libro"], correct: 1 },
+            { q: "¿Qué categoría es 'desde'?", options: ["Preposición", "Conjunción", "Adverbio", "Verbo"], correct: 0 },
+            { q: "En 'Nosotros jugamos ayer', ¿qué palabra es el verbo?", options: ["Nosotros", "jugamos", "ayer", "Ninguna"], correct: 1 }
+        ];
+
+        // --- NAVIGATION ---
+        function showSection(id) {
+            document.querySelectorAll('.section-content').forEach(s => s.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+            if (id === 'quiz') startQuiz();
+            if (id === 'sorter') resetSorter();
+        }
+
+        // --- FLASHCARDS LOGIC ---
+        function initFlashcards() {
+            const container = document.getElementById('cards-container');
+            container.innerHTML = ''; // Limpiar antes de inyectar
+            categoriesData.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "card-flip h-64 w-full";
+                card.innerHTML = `
+                    <div class="card-inner w-full h-full relative" onclick="this.classList.toggle('flipped')">
+                        <div class="card-front bg-white border-2 border-indigo-500 rounded-2xl flex flex-col items-center justify-center p-6 shadow-md">
+                            <h3 class="text-2xl font-bold text-indigo-600">${item.name}</h3>
+                            <p class="mt-4 text-sm text-slate-400">Haz clic para ver la definición</p>
+                        </div>
+                        <div class="card-back bg-indigo-600 text-white rounded-2xl flex flex-col items-center justify-center p-6 shadow-xl overflow-y-auto">
+                            <p class="text-lg mb-4 text-center">${item.def}</p>
+                            <p class="text-sm italic opacity-80 text-center">Ejemplos: ${item.example}</p>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // --- SORTER GAME LOGIC ---
+        function resetSorter() {
+            const wordsContainer = document.getElementById('words-to-drag');
+            const zones = document.querySelectorAll('.content-area');
+            
+            wordsContainer.innerHTML = '';
+            zones.forEach(z => z.innerHTML = '');
+
+            const shuffledWords = [...wordsGame].sort(() => Math.random() - 0.5);
+            
+            shuffledWords.forEach((item, idx) => {
+                const span = document.createElement('div');
+                span.id = `word-${idx}`;
+                span.draggable = true;
+                span.innerText = item.text;
+                span.className = "bg-white border-2 border-indigo-400 px-4 py-2 rounded-lg cursor-move shadow-sm hover:bg-indigo-50 transition font-semibold select-none";
+                span.dataset.cat = item.cat;
+                
+                span.addEventListener('dragstart', e => {
+                    e.dataTransfer.setData('text/plain', e.target.id);
+                });
+
+                wordsContainer.appendChild(span);
+            });
+        }
+
+        // Drag & Drop Handlers
+        document.querySelectorAll('.drop-zone').forEach(zone => {
+            zone.addEventListener('dragover', e => {
+                e.preventDefault();
+                zone.classList.add('drag-over');
+            });
+
+            zone.addEventListener('dragleave', () => {
+                zone.classList.remove('drag-over');
+            });
+
+            zone.addEventListener('drop', e => {
+                e.preventDefault();
+                zone.classList.remove('drag-over');
+                const id = e.dataTransfer.getData('text/plain');
+                const element = document.getElementById(id);
+                const targetCat = zone.dataset.category;
+                const elementCat = element.dataset.cat;
+
+                if (targetCat === elementCat) {
+                    zone.querySelector('.content-area').appendChild(element);
+                    element.draggable = false;
+                    element.className = "bg-emerald-100 text-emerald-700 px-3 py-1 rounded-md text-sm border border-emerald-300";
+                    checkSorterWin();
+                } else {
+                    // Visual feedback for error
+                    element.classList.add('border-red-500', 'animate-pulse');
+                    setTimeout(() => element.classList.remove('border-red-500', 'animate-pulse'), 1000);
+                }
+            });
+        });
+
+        function checkSorterWin() {
+            const remaining = document.getElementById('words-to-drag').children.length;
+            if (remaining === 0) {
+                setTimeout(() => alert("¡Excelente! Has clasificado todas las palabras correctamente."), 300);
+            }
+        }
+
+        // --- QUIZ LOGIC ---
+        let currentQuestionIdx = 0;
+        let score = 0;
+
+        function startQuiz() {
+            currentQuestionIdx = 0;
+            score = 0;
+            document.getElementById('quiz-container').classList.remove('hidden');
+            document.getElementById('quiz-results').classList.add('hidden');
+            updateQuiz();
+        }
+
+        function updateQuiz() {
+            const q = quizQuestions[currentQuestionIdx];
+            document.getElementById('quiz-progress').innerText = `Pregunta ${currentQuestionIdx + 1} de ${quizQuestions.length}`;
+            document.getElementById('quiz-score').innerText = `Puntos: ${score}`;
+            document.getElementById('quiz-question').innerText = q.q;
+            
+            const optionsDiv = document.getElementById('quiz-options');
+            optionsDiv.innerHTML = '';
+            document.getElementById('quiz-feedback').classList.add('hidden');
+
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.innerText = opt;
+                btn.className = "w-full text-left p-4 rounded-xl border-2 border-slate-100 hover:border-indigo-300 hover:bg-indigo-50 transition duration-200 font-medium";
+                btn.onclick = () => checkAnswer(idx);
+                optionsDiv.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(idx) {
+            const q = quizQuestions[currentQuestionIdx];
+            const feedback = document.getElementById('quiz-feedback');
+            const buttons = document.getElementById('quiz-options').children;
+
+            // Disable all buttons
+            for (let b of buttons) b.disabled = true;
+
+            if (idx === q.correct) {
+                score += 10;
+                feedback.innerText = "¡Correcto! ✨";
+                feedback.className = "mt-6 p-4 rounded-lg bg-emerald-100 text-emerald-700 text-center font-bold block";
+                buttons[idx].classList.add('bg-emerald-100', 'border-emerald-500');
+            } else {
+                feedback.innerText = `Incorrecto. La respuesta era: ${q.options[q.correct]}`;
+                feedback.className = "mt-6 p-4 rounded-lg bg-red-100 text-red-700 text-center font-bold block";
+                buttons[idx].classList.add('bg-red-100', 'border-red-500');
+            }
+
+            setTimeout(() => {
+                currentQuestionIdx++;
+                if (currentQuestionIdx < quizQuestions.length) {
+                    updateQuiz();
+                } else {
+                    showResults();
+                }
+            }, 1500);
+        }
+
+        function showResults() {
+            document.getElementById('quiz-container').classList.add('hidden');
+            document.getElementById('quiz-results').classList.remove('hidden');
+            document.getElementById('final-score-text').innerText = `Has obtenido ${score} puntos de ${quizQuestions.length * 10}.`;
+        }
+
+        // Initialize App
+        window.onload = () => {
+            initFlashcards();
+        };
+    </script>
+</body>
+</html>
