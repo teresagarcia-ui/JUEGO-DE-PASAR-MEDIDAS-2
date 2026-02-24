@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Súper Desafío Métrico: Longitud, Masa y Capacidad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Quicksand:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: radial-gradient(circle, #1e40af 0%, #1e1b4b 100%);
+            min-height: 100vh;
+            color: #1e293b;
+        }
+
+        h1, .game-font { font-family: 'Luckiest Guy', cursive; }
+
+        .game-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 2.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 4px solid #60a5fa;
+        }
+
+        .ladder-item {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-width: 2px;
+        }
+
+        .active-step {
+            transform: scale(1.05) translateX(15px);
+            border: 4px solid #f59e0b !important;
+            background-color: #fffbeb !important;
+            z-index: 10;
+        }
+
+        .progress-bar {
+            transition: width 0.5s ease-in-out;
+        }
+
+        .heart {
+            color: #ef4444;
+            display: inline-block;
+            transition: transform 0.3s ease;
+        }
+
+        .heart-lost {
+            filter: grayscale(1);
+            opacity: 0.3;
+            transform: scale(0.8);
+        }
+
+        .magnitude-badge {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-2 md:p-4">
+
+    <div class="max-w-5xl w-full game-card p-4 md:p-8 relative">
+        
+        <!-- CABECERA: Marcadores -->
+        <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+            <div class="flex items-center gap-2 md:gap-4">
+                <div class="bg-blue-100 p-2 md:p-3 rounded-2xl border-2 border-blue-200">
+                    <span class="text-[10px] font-bold text-blue-500 uppercase block">Puntos</span>
+                    <span id="score" class="text-xl md:text-2xl font-black text-blue-700">0</span>
+                </div>
+                <div class="bg-red-100 p-2 md:p-3 rounded-2xl border-2 border-red-200">
+                    <span class="text-[10px] font-bold text-red-500 uppercase block">Vidas</span>
+                    <div id="lives-container" class="text-lg md:text-xl">
+                        <span class="heart">❤️</span>
+                        <span class="heart">❤️</span>
+                        <span class="heart">❤️</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center order-last md:order-none w-full md:w-auto">
+                <h1 id="main-title" class="text-2xl md:text-4xl text-blue-800 tracking-wider">¡BAJA LA ESCALERA!</h1>
+            </div>
+
+            <div class="bg-yellow-100 p-2 md:p-3 rounded-2xl border-2 border-yellow-200 min-w-[80px] text-center">
+                <span class="text-[10px] font-bold text-yellow-600 uppercase block">Nivel</span>
+                <span id="level-display" class="text-xl md:text-2xl font-black text-yellow-700">1</span>
+            </div>
+        </div>
+
+        <!-- INDICADOR DE MAGNITUD -->
+        <div id="magnitude-indicator" class="flex justify-center gap-2 mb-4">
+            <span id="badge-longitud" class="magnitude-badge px-4 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-500">📏 LONGITUD</span>
+            <span id="badge-masa" class="magnitude-badge px-4 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-500">⚖️ MASA</span>
+            <span id="badge-capacidad" class="magnitude-badge px-4 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-500">🧪 CAPACIDAD</span>
+        </div>
+
+        <!-- BARRA DE PROGRESO -->
+        <div class="w-full bg-gray-200 h-3 rounded-full mb-6 overflow-hidden border border-gray-300">
+            <div id="level-progress" class="progress-bar h-full bg-green-500 w-0"></div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- COLUMNA IZQUIERDA: La Escalera -->
+            <div id="ladder" class="lg:col-span-5 space-y-1 relative">
+                <!-- Se genera dinámicamente -->
+            </div>
+
+            <!-- COLUMNA DERECHA: Zona de Juego -->
+            <div class="lg:col-span-7 flex flex-col gap-4">
+                
+                <div id="game-zone" class="bg-slate-50 p-4 md:p-8 rounded-3xl border-4 border-dashed border-blue-200 relative">
+                    
+                    <div id="question-screen" class="text-center">
+                        <p id="instruction-text" class="text-lg text-slate-500 font-bold mb-4">Convierte estas unidades:</p>
+                        
+                        <div class="flex flex-wrap justify-center items-center gap-3 mb-6">
+                            <div class="bg-white p-4 md:p-6 rounded-3xl shadow-lg border-2 border-blue-100">
+                                <span id="q-value" class="text-4xl md:text-5xl font-black text-blue-600">--</span>
+                                <span id="q-unit-from" class="text-xl md:text-2xl font-bold text-blue-400 ml-1">--</span>
+                            </div>
+                            
+                            <div class="animate__animated animate__pulse animate__infinite">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                                </svg>
+                            </div>
+
+                            <div class="bg-blue-600 p-4 md:p-6 rounded-3xl shadow-lg border-2 border-blue-800">
+                                <span id="q-unit-to" class="text-3xl md:text-4xl font-black text-white">--</span>
+                            </div>
+                        </div>
+
+                        <div class="max-w-xs mx-auto mb-4">
+                            <input type="number" id="user-input" step="any"
+                                class="w-full text-center text-3xl p-4 rounded-2xl border-4 border-blue-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all"
+                                placeholder="?"
+                                autocomplete="off">
+                        </div>
+
+                        <button onclick="checkAnswer()" id="check-btn"
+                            class="w-full max-w-xs bg-blue-600 hover:bg-blue-700 text-white game-font text-xl py-4 rounded-2xl shadow-[0_6px_0_rgb(30,58,138)] active:shadow-none active:translate-y-1 transition-all">
+                            ¡COMPROBAR!
+                        </button>
+
+                        <div id="feedback" class="mt-4 font-bold text-lg min-h-[1.5rem]"></div>
+                    </div>
+
+                    <div id="game-over" class="hidden text-center py-8 animate__animated animate__zoomIn">
+                        <h2 class="text-4xl font-black text-red-600 mb-2 game-font">¡FIN DE LA PARTIDA!</h2>
+                        <p class="text-xl text-slate-600 mb-6">Puntuación final: <span id="final-score" class="font-black text-blue-600">0</span></p>
+                        <button onclick="resetGame()" class="bg-green-500 hover:bg-green-600 text-white game-font text-xl px-8 py-4 rounded-2xl shadow-xl transition-transform hover:scale-105">
+                            VOLVER A JUGAR
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recordatorio Visual -->
+                <div id="rule-box" class="bg-slate-800 p-4 rounded-3xl text-white flex items-center gap-4 transition-colors duration-500">
+                    <div class="bg-yellow-400 text-slate-900 w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0">💡</div>
+                    <div>
+                        <p class="font-bold text-sm">Regla de Oro:</p>
+                        <p class="text-xs text-slate-300">Por cada escalón que bajas, añade un 0 (x10). Si hay coma, muévela a la derecha.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const magnitudes = {
+            longitud: {
+                name: "LONGITUD",
+                base: "m",
+                color: "bg-blue-500",
+                border: "border-blue-200",
+                units: ["km", "hm", "dam", "m", "dm", "cm", "mm"]
+            },
+            masa: {
+                name: "MASA",
+                base: "g",
+                color: "bg-emerald-500",
+                border: "border-emerald-200",
+                units: ["kg", "hg", "dag", "g", "dg", "cg", "mg"]
+            },
+            capacidad: {
+                name: "CAPACIDAD",
+                base: "l",
+                color: "bg-purple-500",
+                border: "border-purple-200",
+                units: ["kl", "hl", "dal", "l", "dl", "cl", "ml"]
+            }
+        };
+
+        const stepsNames = ["Kilo-", "Hecto-", "Deca-", "Unidad Base", "Deci-", "Centi-", "Mili-"];
+
+        let state = {
+            score: 0,
+            lives: 3,
+            level: 1,
+            correctInLevel: 0,
+            requiredForLevel: 3,
+            currentMagnitude: 'longitud',
+            currentQuestion: {}
+        };
+
+        function initLadder() {
+            const ladder = document.getElementById('ladder');
+            const mag = magnitudes[state.currentMagnitude];
+            
+            ladder.innerHTML = mag.units.map((u, i) => `
+                <div id="step-${i}" class="ladder-item p-2 md:p-3 border-2 border-slate-100 bg-white rounded-xl font-bold flex justify-between items-center shadow-sm" style="margin-left: ${i * 1.2}rem">
+                    <div class="flex items-center gap-2">
+                        <span class="w-7 h-7 ${mag.color} text-white rounded-lg flex items-center justify-center text-[10px] uppercase">${u}</span>
+                        <span class="text-xs md:text-sm text-slate-600">${stepsNames[i]}${i===3 ? '' : mag.base}</span>
+                    </div>
+                    <div class="step-target hidden text-[10px] text-orange-500 font-black animate__animated animate__flash animate__infinite">🎯 DESTINO</div>
+                </div>
+            `).join('');
+
+            // Actualizar colores visuales de la interfaz
+            const ruleBox = document.getElementById('rule-box');
+            ruleBox.className = `p-4 rounded-3xl text-white flex items-center gap-4 transition-colors duration-500 ${mag.color.replace('bg-', 'bg-slate-')}`;
+        }
+
+        function generateQuestion() {
+            // Elegir magnitud aleatoria
+            const magKeys = Object.keys(magnitudes);
+            state.currentMagnitude = magKeys[Math.floor(Math.random() * magKeys.length)];
+            const mag = magnitudes[state.currentMagnitude];
+
+            // Actualizar indicadores visuales
+            document.querySelectorAll('.magnitude-badge').forEach(b => {
+                b.className = "magnitude-badge px-4 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-500";
+            });
+            const activeBadge = document.getElementById(`badge-${state.currentMagnitude}`);
+            activeBadge.className = `magnitude-badge px-4 py-1 rounded-full text-xs font-bold ${mag.color} text-white shadow-lg scale-110`;
+
+            initLadder();
+
+            // Elegir escalones (Siempre de mayor a menor)
+            const fromIdx = Math.floor(Math.random() * (mag.units.length - 1));
+            const toIdx = Math.floor(Math.random() * (mag.units.length - (fromIdx + 1))) + (fromIdx + 1);
+            
+            const fromUnit = mag.units[fromIdx];
+            const toUnit = mag.units[toIdx];
+            
+            let val;
+            if (state.level === 1) {
+                val = Math.floor(Math.random() * 9) + 1;
+            } else if (state.level === 2) {
+                val = Math.floor(Math.random() * 90) + 10;
+            } else {
+                val = (Math.floor(Math.random() * 80) + 5) / 10; // Decimales
+            }
+
+            const jumps = toIdx - fromIdx;
+            const answer = val * Math.pow(10, jumps);
+
+            state.currentQuestion = { val, fromUnit, toUnit, fromIdx, toIdx, answer, jumps };
+
+            // Actualizar UI
+            document.getElementById('q-value').innerText = val;
+            document.getElementById('q-unit-from').innerText = fromUnit;
+            document.getElementById('q-unit-to').innerText = toUnit;
+            
+            // Resaltar escalera
+            document.querySelectorAll('.ladder-item').forEach(el => el.classList.remove('active-step'));
+            document.querySelectorAll('.step-target').forEach(el => el.classList.add('hidden'));
+            
+            document.getElementById(`step-${fromIdx}`).classList.add('active-step');
+            document.getElementById(`step-${toIdx}`).classList.add('active-step');
+            document.getElementById(`step-${toIdx}`).querySelector('.step-target').classList.remove('hidden');
+
+            document.getElementById('user-input').value = '';
+            document.getElementById('user-input').focus();
+            document.getElementById('feedback').innerHTML = '';
+        }
+
+        function checkAnswer() {
+            const input = document.getElementById('user-input').value.replace(',', '.');
+            const userAns = parseFloat(input);
+            const feedback = document.getElementById('feedback');
+            
+            if (isNaN(userAns)) return;
+
+            if (Math.abs(userAns - state.currentQuestion.answer) < 0.0001) {
+                state.score += (10 * state.level);
+                state.correctInLevel++;
+                
+                feedback.innerHTML = `¡GENIAL! 🌟 ${state.currentQuestion.jumps} saltos = x${Math.pow(10, state.currentQuestion.jumps)}`;
+                feedback.className = "mt-4 font-bold text-lg text-green-600 animate__animated animate__bounceIn";
+                
+                if (state.correctInLevel >= state.requiredForLevel) {
+                    state.level++;
+                    state.correctInLevel = 0;
+                }
+                
+                updateHUD();
+                setTimeout(generateQuestion, 2000);
+            } else {
+                state.lives--;
+                updateHUD();
+                
+                feedback.innerHTML = `❌ Eran ${state.currentQuestion.answer}. ¡Cuenta bien los saltos!`;
+                feedback.className = "mt-4 font-bold text-lg text-red-500 animate__animated animate__shakeX";
+
+                if (state.lives <= 0) {
+                    endGame();
+                } else {
+                    setTimeout(generateQuestion, 3000);
+                }
+            }
+        }
+
+        function updateHUD() {
+            document.getElementById('score').innerText = state.score;
+            document.getElementById('level-display').innerText = state.level;
+            
+            const hearts = document.querySelectorAll('.heart');
+            hearts.forEach((h, i) => {
+                if (i >= state.lives) h.classList.add('heart-lost');
+                else h.classList.remove('heart-lost');
+            });
+
+            const progress = (state.correctInLevel / state.requiredForLevel) * 100;
+            document.getElementById('level-progress').style.width = `${progress}%`;
+        }
+
+        function endGame() {
+            document.getElementById('question-screen').classList.add('hidden');
+            document.getElementById('game-over').classList.remove('hidden');
+            document.getElementById('final-score').innerText = state.score;
+        }
+
+        function resetGame() {
+            state.score = 0;
+            state.lives = 3;
+            state.level = 1;
+            state.correctInLevel = 0;
+            document.getElementById('question-screen').classList.remove('hidden');
+            document.getElementById('game-over').classList.add('hidden');
+            updateHUD();
+            generateQuestion();
+        }
+
+        document.getElementById('user-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') checkAnswer();
+        });
+
+        window.onload = () => {
+            generateQuestion();
+        };
+    </script>
+</body>
+</html>
